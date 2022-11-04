@@ -31,6 +31,8 @@ call dein#add('adoyle-h/telescope-extension-maker.nvim')
 
 ## Examples
 
+More examples at [here](https://github.com/adoyle-h/neovim-config/blob/master/lua/adoyle-neovim-config/plugins/telescope/extensions.lua).
+
 ### :Telescope rtp
 
 ```lua
@@ -111,6 +113,27 @@ maker.register {
     end
 
     return items
+  end,
+}
+```
+
+### :Telescope changes
+
+```lua
+maker.register {
+  name = 'changes',
+
+  command = function()
+    local items = {}
+    for change in vim.api.nvim_exec('changes', true):gmatch('[^\r\n]+') do
+      items[#items + 1] = change
+    end
+    return items
+  end,
+
+  onSubmit = function(item)
+    local _, _, str = string.find(item.text, '^%s+%d+%s+(%d+)')
+    vim.api.nvim_win_set_cursor(0, { tonumber(str), 0 })
   end,
 }
 ```

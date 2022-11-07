@@ -88,13 +88,15 @@ local function extCallback(userOpts, ext)
 
 			if type(r[1]) == 'string' then
 				for _, text in pairs(r) do --
-					if #text == 0 then return end
+					if #text == 0 then goto continue end
 					items[#items + 1] = { text = text }
+					::continue::
 				end
 			else
 				for _, item in pairs(r) do
-					if not displayer then if #item.text == 0 then return end end
+					if not displayer then if #item.text == 0 then goto continue end end
 					items[#items + 1] = item
+					::continue::
 				end
 			end
 

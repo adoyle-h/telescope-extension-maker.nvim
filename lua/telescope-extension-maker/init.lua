@@ -139,13 +139,10 @@ local function extCallback(userOpts, ext)
 		end)
 
 		if ext.refreshKey then
-			-- TODO: refactor after the PR merged. https://github.com/nvim-telescope/telescope.nvim/pull/2220
-			local r = function()
+			map({ 'i', 'n' }, ext.refreshKey, function()
 				local picker = action_state.get_current_picker(prompt_bufnr)
 				picker:refresh(newFinder(), { reset_prompt = false })
-			end
-			map('i', ext.refreshKey, r)
-			map('n', ext.refreshKey, r)
+			end)
 		end
 
 		return true

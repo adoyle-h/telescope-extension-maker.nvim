@@ -134,8 +134,10 @@ local function extCallback(userOpts, ext)
 		actions.select_default:replace(function()
 			actions.close(prompt_bufnr)
 			local selection = action_state.get_selected_entry()
-			local item = items[selection.index]
-			if ext.onSubmit then ext.onSubmit(item) end
+			if selection then
+				local item = items[selection.index]
+				if ext.onSubmit then ext.onSubmit(item) end
+			end
 		end)
 
 		if ext.refreshKey then

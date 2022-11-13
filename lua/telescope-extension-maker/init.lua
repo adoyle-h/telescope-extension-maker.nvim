@@ -7,9 +7,11 @@ local action_state = require('telescope.actions.state')
 local sorters = require('telescope-extension-maker.sorters')
 local previewers = require('telescope-extension-maker.previewers')
 local entry_display = require('telescope.pickers.entry_display')
+local A = require('telescope-extension-maker.async')
 
 local M = {}
 
+local async, await = A.async, A.await
 local set_hl = vim.api.nvim_set_hl
 
 -- @class EntryOpts
@@ -35,30 +37,95 @@ local set_hl = vim.api.nvim_set_hl
 --   action as a jump to this line (optional)
 -- - col number: col value which will be interpreted by the default `<cr>` action
 --   as a jump to this column (optional)
-local entryMaker = function(item, displayer)
-	local entry = item.entry or {}
 
-	if displayer then
-		entry.display = function()
-			return displayer(item.text)
+local entryMaker = function(displayer)
+	return function(item)
+		local entry = item.entry or {}
+
+		if displayer then
+			entry.display = function()
+				return displayer(item.text)
+			end
+		else
+			entry.display = entry.display or item.text
+		end
+
+		entry.ordinal = entry.ordinal or item.text
+
+		return entry
+	end
+end
+
+local function filterItems(r, ctx)
+	local items = {}
+	if type(r[1]) == 'string' then
+		for _, text in pairs(r) do --
+			if #text == 0 then goto continue end
+			items[#items + 1] = { text = text }
+			::continue::
 		end
 	else
-		entry.display = entry.display or item.text
+		for _, item in pairs(r) do
+			if not ctx.displayer then if #item.text == 0 then goto continue end end
+			items[#items + 1] = item
+			::continue::
+		end
 	end
 
-	entry.ordinal = entry.ordinal or item.text
+	return items
+end
 
-	return entry
+local function newFinder(ctx)
+	local results = ctx.getResults()
+	ctx.items = filterItems(results, ctx)
+
+	return finders.new_table { --
+		results = ctx.items,
+		entry_maker = entryMaker(ctx.displayer),
+	}
+end
+
+local function setKeymaps(ctx)
+	return function(prompt_bufnr, map)
+		local ext, items = ctx.ext, ctx.items
+
+		if ext.onSubmit then
+			actions.select_default:replace(function()
+				actions.close(prompt_bufnr)
+				local selection = action_state.get_selected_entry()
+
+				if selection then
+					local item = items[selection.index]
+					ext.onSubmit(item)
+				end
+			end)
+		end
+
+		if ext.refreshKey then
+			map({ 'i', 'n' }, ext.refreshKey, function()
+				local picker = action_state.get_current_picker(prompt_bufnr)
+				async(function()
+					picker:refresh(newFinder(ctx), { reset_prompt = false })
+				end)()
+			end)
+		end
+
+		return true
+	end
+end
+
+local once = function(fn)
+	local done = false
+	return function(...)
+		if done then return end
+		done = true
+		fn(...)
+	end
 end
 
 -- @param userOpts {table} user config of telescope extension
 -- @param ext {MakerExtension}
-local function extCallback(userOpts, ext)
-	local items
-	local getResults
-
-	ext = vim.tbl_extend('keep', ext, { picker = {}, highlights = {}, refreshKey = '<C-r>' })
-
+local extCallback = function(userOpts, ext)
 	local opts = vim.tbl_extend('keep', userOpts or {}, ext.picker)
 
 	opts = vim.tbl_extend('keep', opts, {
@@ -70,8 +137,9 @@ local function extCallback(userOpts, ext)
 		wrap_results = true,
 	})
 
-	local displayer
-	if ext.format then displayer = entry_display.create(ext.format) end
+	local ctx = { opts = opts, ext = ext }
+
+	if ext.format then ctx.displayer = entry_display.create(ext.format) end
 
 	local previewer = opts.previewer
 	if type(previewer) == 'string' then opts.previewer = previewers.get(previewer) end
@@ -80,77 +148,32 @@ local function extCallback(userOpts, ext)
 	if type(sorter) == 'string' then opts.sorter = sorters.get(sorter) end
 
 	local command = ext.command
+
 	if type(command) == 'function' then
-		getResults = function()
-			items = {}
+		ctx.getResults = function()
+			local err, results = await(function(callback)
+				local cb = once(callback)
+				local results = command(cb)
+				if results ~= nil then cb(nil, results) end
+			end)
 
-			local r = command() or {}
-
-			if type(r[1]) == 'string' then
-				for _, text in pairs(r) do --
-					if #text == 0 then goto continue end
-					items[#items + 1] = { text = text }
-					::continue::
-				end
-			else
-				for _, item in pairs(r) do
-					if not displayer then if #item.text == 0 then goto continue end end
-					items[#items + 1] = item
-					::continue::
-				end
-			end
-
-			return items
+			if err then error(tostring(err)) end
+			if results == nil then error('The extension command returned nil') end
+			return results
 		end
 	else
-		getResults = function()
-			items = {}
+		ctx.getResults = function()
 			local r = vim.api.nvim_exec(command, true)
-
-			for _, text in pairs(vim.split(r, '\n')) do --
-				if #text > 0 then items[#items + 1] = { text = text } end
-			end
-
-			return items
+			return vim.split(r, '\n')
 		end
 	end
 
-	local newFinder = function()
-		return finders.new_table {
-			results = getResults(),
-			entry_maker = function(item)
-				return entryMaker(item, displayer)
-			end,
-		}
-	end
-
-	opts.finder = newFinder()
+	opts.finder = newFinder(ctx)
 
 	local selIdx = opts.default_selection_index
-	if selIdx < 0 then opts.default_selection_index = #items + 1 + selIdx end
+	if selIdx < 0 then opts.default_selection_index = #ctx.items + 1 + selIdx end
 
-	opts.attach_mappings = function(prompt_bufnr, map)
-
-		actions.select_default:replace(function()
-			actions.close(prompt_bufnr)
-			local selection = action_state.get_selected_entry()
-			if selection then
-				local item = items[selection.index]
-				if ext.onSubmit then ext.onSubmit(item) end
-			end
-		end)
-
-		if ext.refreshKey then
-			map({ 'i', 'n' }, ext.refreshKey, function()
-				local picker = action_state.get_current_picker(prompt_bufnr)
-				picker:refresh(newFinder(), { reset_prompt = false })
-			end)
-		end
-
-		return true
-	end
-
-	for hlName, hlProps in pairs(ext.highlights) do set_hl(0, hlName, hlProps) end
+	opts.attach_mappings = setKeymaps(ctx)
 
 	-- https://github.com/nvim-telescope/telescope.nvim/blob/master/developers.md#first-picker
 	pickers.new(opts):find()
@@ -187,9 +210,11 @@ end
 
 -- @class MakerExtension {table}
 -- @prop name {string}
--- @prop command {string|function}
+-- @prop command {string|function:{string[]|Item[]|nil}}
 --   If it's string, it must be vimscript codes. See :h nvim_exec
---   If it's function, it must return string[] or Item[]
+--   If it's function, it must return string[] or Item[] or nil.
+--   It supports async function. The function accept a callback as parameter, whose signature is `function(err, results)`.
+--   You can invoke `callback(err)` to pass an error for exception. Or invoke `callback(nil, results)` to pass results.
 -- @prop [setup] {function} function(ext_config, config)  See telescope.register_extension({setup})
 -- @prop [onSubmit] {function} function(Item):nil . Callback when user press <CR>
 -- @prop [format] {table}
@@ -203,14 +228,20 @@ end
 -- Create a telescope extension.
 -- @param ext {MakerExtension}
 function M.create(ext)
+	ext = vim.tbl_extend('keep', ext, { picker = {}, highlights = {}, refreshKey = '<C-r>' })
+
 	local name = ext.name
+
+	for hlName, hlProps in pairs(ext.highlights) do set_hl(0, hlName, hlProps) end
 
 	local extension = telescope.register_extension({
 		-- function(ext_config, config)
 		setup = ext.setup,
 		exports = {
 			[name] = function(opts)
-				extCallback(opts, ext)
+				async(function()
+					extCallback(opts, ext)
+				end)()
 			end,
 		},
 	})

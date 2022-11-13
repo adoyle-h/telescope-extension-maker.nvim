@@ -1,6 +1,6 @@
 # telescope-extension-maker.nvim
 
-Easy to make a telescope extension.
+Easy to make a telescope extension. Support async function.
 
 ## Dependencies
 
@@ -31,7 +31,7 @@ call dein#add('adoyle-h/telescope-extension-maker.nvim')
 
 ## Examples
 
-More examples at [here](https://github.com/adoyle-h/neovim-config/blob/master/lua/adoyle-neovim-config/plugins/telescope/extensions.lua).
+More examples see [ad-telescope-extensions](https://github.com/adoyle-h/ad-telescope-extensions.nvim) and [here](https://github.com/adoyle-h/one.nvim/blob/master/lua/one/plugins/telescope/extensions.lua).
 
 ### :Telescope rtp
 
@@ -138,6 +138,45 @@ maker.register {
 }
 ```
 
+### Async Command
+
+It supports async function. The function accept a callback as parameter, whose signature is `function(err, results)`.
+
+You can invoke `callback(nil, results)` to pass results.
+
+```lua
+maker.register {
+  name = 'hello',
+  command = function(callback)
+    vim.defer_fn(function()
+      local items = { 'a', 'b', 'c' }
+      callback(nil, items)
+    end, 3000)
+  end,
+}
+```
+
+```lua
+maker.register {
+  name = 'hello2',
+  command = function(callback)
+    local items = { 'a', 'b', 'c' }
+    callback(nil, items)
+  end,
+}
+```
+
+You can invoke `callback(err)` to pass an error for exception.
+
+```lua
+maker.register {
+  name = 'hello3',
+  command = function(callback)
+    callback(error('failed'))
+  end,
+}
+```
+
 ## API
 
 ### register(ext)
@@ -180,6 +219,11 @@ return require('telescope-extension-maker').create {
 -- @prop command {string|function}
 --   If it's string, it must be vimscript codes. See :h nvim_exec
 --   If it's function, it must return string[] or Item[]
+-- @prop command {string|function:{string[]|Item[]|nil}}
+--   If it's string, it must be vimscript codes. See :h nvim_exec
+--   If it's function, it must return string[] or Item[] or nil.
+--   The function accept a callback for async command. Its signature is function(err, results).
+--   You can invoke callback(err) to pass an error in command. Or invoke callback(nil, results) to pass results.
 -- @prop [setup] {function} function(ext_config, config)  See telescope.register_extension({setup})
 -- @prop [onSubmit] {function} function(Item):nil . Callback when user press <CR>
 -- @prop [format] {table}

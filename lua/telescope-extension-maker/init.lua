@@ -187,9 +187,9 @@ end
 -- @class PickerOptions {table}
 --   The telescope picker options.
 --   See https://github.com/nvim-telescope/telescope.nvim/blob/master/developers.md#picker
---   Or see the source code at telescope.nvim/lua/telescope/pickers.lua Picker:new
+--   Or see the source code [Picker:new at telescope.nvim/lua/telescope/pickers.lua](https://github.com/nvim-telescope/telescope.nvim/blob/7a4ffef931769c3fe7544214ed7ffde5852653f6/lua/telescope/pickers.lua#L45).
 --
---   But these fields is not supported: finder, attach_mappings
+--   But these fields is not supported: `finder`, `attach_mappings`.
 --   Because they are defined in telescope-extension-maker.
 --
 -- @prop [prompt_title=MakerExtension.name] {string}

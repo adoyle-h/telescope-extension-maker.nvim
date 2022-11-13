@@ -1,6 +1,6 @@
 # telescope-extension-maker.nvim
 
-Easy to make a telescope extension. Support async function.
+Easy to make a telescope extension. It supports [async function](#async-command).
 
 ## Dependencies
 
@@ -33,7 +33,7 @@ call dein#add('adoyle-h/telescope-extension-maker.nvim')
 
 More examples see [ad-telescope-extensions](https://github.com/adoyle-h/ad-telescope-extensions.nvim) and [here](https://github.com/adoyle-h/one.nvim/blob/master/lua/one/plugins/telescope/extensions.lua).
 
-### :Telescope rtp
+### The simplest
 
 ```lua
 require('telescope').setup()
@@ -41,11 +41,13 @@ local maker = require('telescope-extension-maker')
 
 maker.register {
   name = 'rtp',
-  command = 'set rtp',
+  command = 'set rtp', -- vimscript
 }
 ```
 
-### :Telescope message
+`:Telescope rtp`
+
+### Picker Options
 
 ```lua
 maker.register {
@@ -58,7 +60,9 @@ maker.register {
 }
 ```
 
-### :Telescope colors
+See [Types - PickerOptions](#picker-options).
+
+### Command function
 
 ```lua
 maker.register {
@@ -78,7 +82,23 @@ maker.register {
 }
 ```
 
-### :Telescope env
+### Preview file
+
+```lua
+maker.register {
+  name = 'scriptnames',
+  picker = { previewer = 'cat' },
+  command = function()
+    local output = vim.api.nvim_exec('scriptnames', true)
+    return vim.tbl_map(function(text)
+      local _, _, path = string.find(text, '^%s*%d+: (.+)')
+      return { text = text, entry = { path = path } }
+    end, vim.split(output, '\n'))
+  end,
+}
+```
+
+### Highlight text
 
 ```lua
 maker.register {
@@ -117,7 +137,7 @@ maker.register {
 }
 ```
 
-### :Telescope changes
+### onSubmit
 
 ```lua
 maker.register {
@@ -250,9 +270,9 @@ return require('telescope-extension-maker').create {
 -- @class PickerOptions {table}
 --   The telescope picker options.
 --   See https://github.com/nvim-telescope/telescope.nvim/blob/master/developers.md#picker
---   Or see the source code at telescope.nvim/lua/telescope/pickers.lua Picker:new
+--   Or see the source code [Picker:new at telescope.nvim/lua/telescope/pickers.lua](https://github.com/nvim-telescope/telescope.nvim/blob/7a4ffef931769c3fe7544214ed7ffde5852653f6/lua/telescope/pickers.lua#L45).
 --
---   But these fields is not supported: finder, attach_mappings
+--   But these fields is not supported: `finder`, `attach_mappings`.
 --   Because they are defined in telescope-extension-maker.
 --
 -- @prop [prompt_title=MakerExtension.name] {string}

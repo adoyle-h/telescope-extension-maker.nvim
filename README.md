@@ -192,7 +192,7 @@ You can invoke `callback(err)` to pass an error for exception.
 maker.register {
   name = 'hello3',
   command = function(callback)
-    callback(error('failed'))
+    callback('failed')
   end,
 }
 ```

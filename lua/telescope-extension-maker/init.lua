@@ -4,6 +4,7 @@ local pickers = require('telescope.pickers')
 local finders = require('telescope.finders')
 local actions = require('telescope.actions')
 local action_state = require('telescope.actions.state')
+local action_utils = require 'telescope.actions.utils'
 local sorters = require('telescope-extension-maker.sorters')
 local previewers = require('telescope-extension-maker.previewers')
 local entry_display = require('telescope.pickers.entry_display')
@@ -91,12 +92,21 @@ local function setKeymaps(ctx)
 
 		if ext.onSubmit then
 			actions.select_default:replace(function()
-				actions.close(prompt_bufnr)
-				local selection = action_state.get_selected_entry()
-
-				if selection then
+				local selections = {}
+				action_utils.map_selections(prompt_bufnr, function(selection)
 					local item = items[selection.index]
-					ext.onSubmit(item)
+					table.insert(selections, item)
+				end)
+
+				actions.close(prompt_bufnr)
+
+				if #selections == 1 then
+					ext.onSubmit(selections[1])
+				elseif #selections > 1 then
+					ext.onSubmit(selections)
+				else
+					local selection = action_state.get_selected_entry()
+					ext.onSubmit(items[selection.index])
 				end
 			end)
 		end

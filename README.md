@@ -139,6 +139,8 @@ maker.register {
 
 ### onSubmit
 
+#### Single Selection
+
 ```lua
 maker.register {
   name = 'changes',
@@ -152,8 +154,42 @@ maker.register {
   end,
 
   onSubmit = function(item)
+    if vim.tbl_islist(items) then
+      error('Not support multiple selections')
+    end
+
     local _, _, str = string.find(item.text, '^%s+%d+%s+(%d+)')
     vim.api.nvim_win_set_cursor(0, { tonumber(str), 0 })
+  end,
+}
+```
+
+#### Multiple Selections
+
+```lua
+maker.register {
+  name = 'lsp_document_symbols_filter',
+
+  command = function()
+    return {
+      'File', 'Module', 'Namespace', 'Package', 'Class', 'Method', 'Property', 'Field',
+      'Constructor', 'Enum', 'Interface', 'Function', 'Variable', 'Constant', 'String',
+      'Number', 'Boolean', 'Array', 'Object', 'Key', 'Null', 'EnumMember', 'Struct', 'Event',
+      'Operator', 'TypeParameter',
+    }
+  end,
+
+  onSubmit = function(items)
+    local symbols
+    if vim.tbl_islist(items) then
+      symbols = vim.tbl_map(function(item)
+        return item.text
+      end, items)
+    else
+      symbols = { items.text }
+    end
+
+    require('telescope.builtin').lsp_document_symbols { symbols = symbols }
   end,
 }
 ```

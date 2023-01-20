@@ -328,14 +328,13 @@ If you want to submit a new feature, please open an [issue][] for feature reques
 
 If you want to submit a bug fix, search related issues first, and then open a Pull Requst.
 
-## Versions
+## Suggestion, Bug Reporting, Contributing
 
-See [tags][].
-The versions follows the rules of [SemVer 2.0.0](http://semver.org/).
+Please read [./docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) before opening new Issue/Discussion/PR and posting any comments.
 
 ## Copyright and License
 
-Copyright 2022 ADoyle (adoyle.h@gmail.com) Some Rights Reserved.
+Copyright 2022-2023 ADoyle (adoyle.h@gmail.com) Some Rights Reserved.
 The project is licensed under the **Apache License Version 2.0**.
 
 See the [LICENSE][] file for the specific language governing permissions and limitations under the License.

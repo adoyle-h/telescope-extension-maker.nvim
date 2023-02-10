@@ -154,7 +154,7 @@ maker.register {
   end,
 
   onSubmit = function(item)
-    if vim.tbl_islist(items) then
+    if vim.tbl_islist(item) then
       error('Not support multiple selections')
     end
 
@@ -358,19 +358,11 @@ return require('telescope-extension-maker').create {
 
 ## Suggestion, Bug Reporting, Contributing
 
-Any suggestions and contributions are always welcome. Please open an [issue][] to contact with me.
-
-If you want to submit a new feature, please open an [issue][] for feature request to talk about your design.
-
-If you want to submit a bug fix, search related issues first, and then open a Pull Requst.
-
-## Suggestion, Bug Reporting, Contributing
-
-Please read [./docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) before opening new Issue/Discussion/PR and posting any comments.
+**Before opening new Issue/Discussion/PR and posting any comments**, please read [Contributing Guidelines](https://gcg.adoyle.me/CONTRIBUTING).
 
 ## Copyright and License
 
-Copyright 2022-2023 ADoyle (adoyle.h@gmail.com) Some Rights Reserved.
+Copyright 2022-2023 ADoyle (adoyle.h@gmail.com). Some Rights Reserved.
 The project is licensed under the **Apache License Version 2.0**.
 
 See the [LICENSE][] file for the specific language governing permissions and limitations under the License.

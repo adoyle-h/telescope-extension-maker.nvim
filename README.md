@@ -127,8 +127,6 @@ maker.register {
         entry = {
           ordinal = key .. '=' .. value,
         },
-        key = key,
-        value = value,
       })
     end
 
@@ -136,6 +134,10 @@ maker.register {
   end,
 }
 ```
+
+It looks like:
+
+![env.png](https://media.githubusercontent.com/media/adoyle-h/_imgs/master/github/ad-telescope-extensions.nvim/env.png)
 
 ### onSubmit
 

@@ -1,12 +1,11 @@
 -- telescope extension tools
 local telescope = require('telescope')
 local pickers = require('telescope.pickers')
-local finders = require('telescope.finders')
 local actions = require('telescope.actions')
-local action_state = require('telescope.actions.state')
 local action_utils = require 'telescope.actions.utils'
 local sorters = require('telescope-extension-maker.sorters')
 local previewers = require('telescope-extension-maker.previewers')
+local CTX = require('telescope-extension-maker.ctx')
 local entry_display = require('telescope.pickers.entry_display')
 local A = require('telescope-extension-maker.async')
 
@@ -39,53 +38,6 @@ local set_hl = vim.api.nvim_set_hl
 -- - col number: col value which will be interpreted by the default `<cr>` action
 --   as a jump to this column (optional)
 
-local entryMaker = function(displayer)
-	return function(item)
-		local entry = item.entry or {}
-
-		if displayer then
-			entry.display = function()
-				return displayer(item.text)
-			end
-		else
-			entry.display = entry.display or item.text
-		end
-
-		entry.ordinal = entry.ordinal or item.text
-
-		return entry
-	end
-end
-
-local function filterItems(r, ctx)
-	local items = {}
-	if type(r[1]) == 'string' then
-		for _, text in pairs(r) do --
-			if #text == 0 then goto continue end
-			items[#items + 1] = { text = text }
-			::continue::
-		end
-	else
-		for _, item in pairs(r) do
-			if not ctx.displayer then if #item.text == 0 then goto continue end end
-			items[#items + 1] = item
-			::continue::
-		end
-	end
-
-	return items
-end
-
-local function newFinder(ctx)
-	local results = ctx.getResults()
-	ctx.items = filterItems(results, ctx)
-
-	return finders.new_table { --
-		results = ctx.items,
-		entry_maker = entryMaker(ctx.displayer),
-	}
-end
-
 local function setKeymaps(ctx)
 	return function(prompt_bufnr, map)
 		local ext, items = ctx.ext, ctx.items
@@ -105,20 +57,18 @@ local function setKeymaps(ctx)
 				elseif #selections > 1 then
 					ext.onSubmit(selections)
 				else
-					local selection = action_state.get_selected_entry()
-					ext.onSubmit(items[selection.index])
+					ext.onSubmit(ctx:getSelectedItem())
 				end
 			end)
 		end
 
 		if ext.refreshKey then
 			map({ 'i', 'n' }, ext.refreshKey, function()
-				local picker = action_state.get_current_picker(prompt_bufnr)
-				async(function()
-					picker:refresh(newFinder(ctx), { reset_prompt = false })
-				end)()
+				ctx:refreshPicker(prompt_bufnr)
 			end)
 		end
+
+		if ext.remap then ext.remap(map, ctx, prompt_bufnr) end
 
 		return true
 	end
@@ -147,7 +97,7 @@ local extCallback = function(userOpts, ext)
 		wrap_results = true,
 	})
 
-	local ctx = { opts = opts, ext = ext }
+	local ctx = CTX:new(opts, ext)
 
 	if ext.format then ctx.displayer = entry_display.create(ext.format) end
 
@@ -157,28 +107,7 @@ local extCallback = function(userOpts, ext)
 	local sorter = opts.sorter
 	if type(sorter) == 'string' then opts.sorter = sorters.get(sorter) end
 
-	local command = ext.command
-
-	if type(command) == 'function' then
-		ctx.getResults = function()
-			local err, results = await(function(callback)
-				local cb = once(callback)
-				local results = command(cb)
-				if results ~= nil then cb(nil, results) end
-			end)
-
-			if err then error(tostring(err)) end
-			if results == nil then error('The extension command returned nil') end
-			return results
-		end
-	else
-		ctx.getResults = function()
-			local r = vim.api.nvim_exec(command, true)
-			return vim.split(r, '\n')
-		end
-	end
-
-	opts.finder = newFinder(ctx)
+	opts.finder = ctx:newFinder()
 
 	local selIdx = opts.default_selection_index
 	if selIdx < 0 then opts.default_selection_index = #ctx.items + 1 + selIdx end
@@ -227,6 +156,8 @@ end
 --   You can invoke `callback(err)` to pass an error for exception. Or invoke `callback(nil, results)` to pass results.
 -- @prop [setup] {function} function(ext_config, config)  See telescope.register_extension({setup})
 -- @prop [onSubmit] {function} function(Item):nil . Callback when user press <CR>
+-- @prop [remap] {function} function(map, ctx, prompt_bufnr):nil  Set keymaps for the picker
+--   For example, map({'i', 'n'}, '<C-d>', function() ... end)
 -- @prop [format] {table}
 --   {separator: string, items: table[]}
 --   See :h telescope.pickers.entry_display

@@ -235,6 +235,23 @@ maker.register {
 }
 ```
 
+### Set keymaps for picker
+
+To create keymap `<C-9>` for current picker.
+
+```lua
+maker.register {
+  name = 'message',
+  command = 'messages',
+  remap = function(map, ctx, prompt_bufnr)
+    map({ 'i', 'n' }, '<C-9>', function()
+      local item = ctx:getSelectedItem()
+      print('Current selected: ' .. item.text)
+    end)
+  end,
+}
+```
+
 ## API
 
 ### register(ext)
@@ -284,6 +301,8 @@ return require('telescope-extension-maker').create {
 --   You can invoke callback(err) to pass an error in command. Or invoke callback(nil, results) to pass results.
 -- @prop [setup] {function} function(ext_config, config)  See telescope.register_extension({setup})
 -- @prop [onSubmit] {function} function(Item):nil . Callback when user press <CR>
+-- @prop [remap] {function} function(map, ctx, prompt_bufnr):nil  Set keymaps for the picker
+--   For example, map({'i', 'n'}, '<C-d>', function() ... end)
 -- @prop [format] {table}
 --   {separator: string, items: table[]}
 --   See :h telescope.pickers.entry_display

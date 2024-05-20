@@ -6,7 +6,6 @@ local action_utils = require 'telescope.actions.utils'
 local sorters = require('telescope-extension-maker.sorters')
 local previewers = require('telescope-extension-maker.previewers')
 local CTX = require('telescope-extension-maker.ctx')
-local entry_display = require('telescope.pickers.entry_display')
 local A = require('telescope-extension-maker.async')
 
 local M = {}
@@ -74,15 +73,6 @@ local function setKeymaps(ctx)
 	end
 end
 
-local once = function(fn)
-	local done = false
-	return function(...)
-		if done then return end
-		done = true
-		fn(...)
-	end
-end
-
 -- @param userOpts {table} user config of telescope extension
 -- @param ext {MakerExtension}
 local extCallback = function(userOpts, ext)
@@ -98,8 +88,6 @@ local extCallback = function(userOpts, ext)
 	})
 
 	local ctx = CTX:new(opts, ext)
-
-	if ext.format then ctx.displayer = entry_display.create(ext.format) end
 
 	local previewer = opts.previewer
 	if type(previewer) == 'string' then opts.previewer = previewers.get(previewer) end
@@ -136,10 +124,13 @@ end
 -- @prop [preview_title='Preview'] {string}
 -- @prop [finder] {function} like finders.new_table
 -- @prop [sorter='generic'] {Sorter|string}
+--   string values: 'empty' 'file' 'generic' 'index_bias' 'fzy' 'highlight' 'levenshtein' 'substr' 'prefilter'
+--   See lua/telescope-extension-maker/sorters.lua
 -- @prop [previewer=false] {previewer|string|false}
 -- @prop [layout_strategy] {table}
 -- @prop [layout_config] {table}
 -- @prop [scroll_strategy] {string}
+-- @prop [sorting_strategy='descending'] {string} 'descending' 'ascending'
 -- @prop [selection_strategy] {string} Values: follow, reset, row
 -- @prop [cwd] {string}
 -- @prop [default_text] {string}
@@ -165,6 +156,7 @@ end
 --   Set highlights used for displayer . See :h nvim_set_hl
 -- @prop [picker] {PickerOptions}
 -- @prop [refreshKey='<C-r>'] {string|false} Keymap to refresh results. Set false to cancel the keymap.
+-- @prop [commandReturnEntryNotItem=false] {boolean} When true, the returned value of command function is {EntryOpts[]}
 
 -- Create a telescope extension.
 -- @param ext {MakerExtension}

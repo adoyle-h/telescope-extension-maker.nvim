@@ -60,7 +60,7 @@ maker.register {
 }
 ```
 
-See [Types - PickerOptions](#picker-options).
+See [Types - PickerOptions](#pickeroptions).
 
 ### Command function
 
@@ -120,7 +120,7 @@ maker.register {
 
     for key, value in pairs(vim.fn.environ()) do
       table.insert(items, {
-        -- When displayer set, text must be a table.
+        -- When format set, text must be a table.
         -- See :h telescope.pickers.entry_display
         text = { { key, 'tel_ext_envs_1' }, { '=', 'tel_ext_envs_2' }, value },
 
@@ -291,14 +291,11 @@ return require('telescope-extension-maker').create {
 ```lua
 -- @class MakerExtension {table}
 -- @prop name {string}
--- @prop command {string|function}
---   If it's string, it must be vimscript codes. See :h nvim_exec
---   If it's function, it must return string[] or Item[]
 -- @prop command {string|function:{string[]|Item[]|nil}}
 --   If it's string, it must be vimscript codes. See :h nvim_exec
 --   If it's function, it must return string[] or Item[] or nil.
---   The function accept a callback for async command. Its signature is function(err, results).
---   You can invoke callback(err) to pass an error in command. Or invoke callback(nil, results) to pass results.
+--   It supports async function. The function accept a callback as parameter, whose signature is `function(err, results)`.
+--   You can invoke `callback(err)` to pass an error for exception. Or invoke `callback(nil, results)` to pass results.
 -- @prop [setup] {function} function(ext_config, config)  See telescope.register_extension({setup})
 -- @prop [onSubmit] {function} function(Item):nil . Callback when user press <CR>
 -- @prop [remap] {function} function(map, ctx, prompt_bufnr):nil  Set keymaps for the picker
@@ -310,6 +307,7 @@ return require('telescope-extension-maker').create {
 --   Set highlights used for displayer . See :h nvim_set_hl
 -- @prop [picker] {PickerOptions}
 -- @prop [refreshKey='<C-r>'] {string|false} Keymap to refresh results. Set false to cancel the keymap.
+-- @prop [commandReturnEntryNotItem=false] {boolean} When true, the returned value of command function is {EntryOpts[]}
 ```
 
 ### Item
@@ -337,10 +335,13 @@ return require('telescope-extension-maker').create {
 -- @prop [preview_title='Preview'] {string}
 -- @prop [finder] {function} like finders.new_table
 -- @prop [sorter='generic'] {Sorter|string}
+--   string value: 'empty' 'file' 'generic' 'index_bias' 'fzy' 'highlight' 'levenshtein' 'substr' 'prefilter'
+--   See lua/telescope-extension-maker/sorters.lua
 -- @prop [previewer=false] {previewer|string|false}
 -- @prop [layout_strategy] {table}
 -- @prop [layout_config] {table}
 -- @prop [scroll_strategy] {string}
+-- @prop [sorting_strategy='descending'] {string} 'descending' 'ascending'
 -- @prop [selection_strategy] {string} Values: follow, reset, row
 -- @prop [cwd] {string}
 -- @prop [default_text] {string}

@@ -1,5 +1,8 @@
+local actions = require('telescope.actions')
 local action_state = require('telescope.actions.state')
+local action_utils = require 'telescope.actions.utils'
 local finders = require('telescope.finders')
+local entry_display = require('telescope.pickers.entry_display')
 local A = require('telescope-extension-maker.async')
 
 local async, await = A.async, A.await
@@ -16,7 +19,16 @@ end
 local CTX = {}
 
 function CTX:new(opts, ext)
-	local ctx = { opts = opts, ext = ext }
+	local ctx = {
+		opts = opts,
+		ext = ext,
+		actions = actions,
+		action_state = action_state,
+		action_utils = action_utils
+	}
+
+	if ext.format then ctx.displayer = entry_display.create(ext.format) end
+	ctx.commandReturnEntryNotItem = ext.commandReturnEntryNotItem or false
 
 	setmetatable(ctx, self)
 	self.__index = self
@@ -53,6 +65,7 @@ function CTX:refreshPicker(prompt_bufnr, opts)
 	end)()
 end
 
+-- filter items to avoid errors even if some items have wrong fields and values
 local function filterItems(r, ctx)
 	local items = {}
 	if type(r[1]) == 'string' then
@@ -63,7 +76,14 @@ local function filterItems(r, ctx)
 		end
 	else
 		for _, item in pairs(r) do
-			if not ctx.displayer then if #item.text == 0 then goto continue end end
+			if ctx.commandReturnEntryNotItem then
+				-- nothing
+			else
+				if item.text == nil or #item.text == 0 then
+					goto continue
+				end
+			end
+
 			items[#items + 1] = item
 			::continue::
 		end
@@ -72,16 +92,22 @@ local function filterItems(r, ctx)
 	return items
 end
 
-local entryMaker = function(displayer)
+local entryMaker = function(ctx)
 	return function(item)
+		if ctx.commandReturnEntryNotItem then
+			return item
+		end
+
 		local entry = item.entry or {}
 
-		if displayer then
-			entry.display = function()
-				return displayer(item.text)
+		if not entry.display then
+			if ctx.displayer then
+				entry.display = function()
+					return ctx.displayer(item.text)
+				end
+			else
+				entry.display = item.text
 			end
-		else
-			entry.display = entry.display or item.text
 		end
 
 		entry.ordinal = entry.ordinal or item.text
@@ -97,7 +123,7 @@ function CTX:newFinder()
 
 	return finders.new_table { --
 		results = ctx.items,
-		entry_maker = entryMaker(ctx.displayer),
+		entry_maker = entryMaker(ctx),
 	}
 end
 
